@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-deployment
+  namespace: echo-namespace
+spec:
+  replicas: 2 # Run 2 instances of our container
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+      - name: echo
+        image: echo-service:v1.0.1 # Use the image you built earlier
+        ports:
+        - containerPort: 3000 # The port your container exposes
+        resources:
+          requests: # Minimum resources required
+            cpu: "250m" # 250 millicpu (1/4 CPU core)
+            memory: "100Mi" # 100 MiB
+          limits: # Maximum resources allowed
+            cpu: "500m" # 500 millicpu (1/2 CPU core)
+            memory: "200Mi" # 200 MiB
+        env:
+          - name: LOG_LEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: echo-config
+                key: LOG_LEVEL
+          - name: RESPONSE_PREFIX
+            valueFrom:
+              configMapKeyRef:
+                name: echo-config
+                key: RESPONSE_PREFIX
+          - name: API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: echo-secret
+                key: API_KEY
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-service
+  namespace: echo-namespace
+spec:
+  type: ClusterIP # Exposes the service on a cluster-internal IP
+  selector:
+    app: echo
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000 # Port on the container
